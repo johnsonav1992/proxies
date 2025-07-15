@@ -59,3 +59,30 @@ try {
 } catch (error) {
   console.log("Schema error caught:", (error as Error).message);
 }
+
+//// EXERCISE 2 - Array with negative indexing
+
+const getProxiedArray = <T>(arr: T[]) => {
+  return new Proxy(arr, {
+    get(array, prop) {
+      if (typeof prop !== "string" || isNaN(Number(prop))) {
+        return array[prop as keyof typeof array];
+      }
+
+      const index = Number(prop);
+
+      return array.at(index);
+    },
+  });
+};
+
+const arr = [1, 2, 3, 4, 5];
+const proxiedArray = getProxiedArray(arr);
+
+console.log("\n=== Negative Indexing Test ===");
+console.log("proxiedArray[-1]:", proxiedArray[-1]); // 5
+console.log("proxiedArray[-2]:", proxiedArray[-2]); // 4
+console.log("proxiedArray[0]:", proxiedArray[0]); // 1 (your version would break here)
+console.log("proxiedArray.length:", proxiedArray.length); // 5
+console.log("proxiedArray.push(6):", proxiedArray.push(6)); // Still works!
+console.log("proxiedArray[-1]:", proxiedArray[-1]); // Now 6
