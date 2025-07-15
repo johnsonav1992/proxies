@@ -100,7 +100,7 @@ const createLoggedObj = <TObj extends object>(obj: TObj) => {
           return val.apply(obj, args); // Don't forget to return!
         };
       }
-      
+
       return val; // Return non-function properties
     },
   });
@@ -116,3 +116,63 @@ const loggedCalculator = createLoggedObj(calculator);
 console.log("\n=== Function Call Interceptor Test ===");
 console.log("Result:", loggedCalculator.add(2, 3)); // Should log call and return 5
 console.log("Result:", loggedCalculator.multiply(4, 5)); // Should log call and return 20
+
+//// EXERCISE 4 - Method Chaining with Proxies
+
+class ChainableString {
+  private value: string;
+
+  constructor(initial: string = "") {
+    this.value = initial;
+  }
+
+  // Real methods that exist
+  append(text: string): ChainableString {
+    this.value += text;
+    return this;
+  }
+
+  prepend(text: string): ChainableString {
+    this.value = text + this.value;
+    return this;
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
+
+const createChainableProxy = <T extends object>(target: T): T => {
+  const proxy = new Proxy(target, {
+    get(obj, prop) {
+      const value = obj[prop as keyof typeof obj];
+
+      if (typeof value === "function") {
+        return (...args: any[]) => {
+          const result = value.apply(obj, args);
+          return result === obj ? proxy : result;
+        };
+      }
+
+      return (...args: any[]) => {
+        console.log(`Chaining: ${String(prop)}(${args.join(", ")})`);
+        return proxy;
+      };
+    },
+  });
+
+  return proxy;
+};
+
+const chainable = createChainableProxy(new ChainableString("Hello"));
+
+console.log("\n=== Method Chaining Test ===");
+const result = chainable
+  .append(" World")
+  //@ts-ignore
+  .makeUpperCase() // Doesn't exist, but chains anyway
+  .addEmoji("🎉") // Doesn't exist, but chains anyway
+  .prepend(">>> ")
+  .toString();
+
+console.log("Final result:", result);
