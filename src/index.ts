@@ -176,3 +176,54 @@ const result = chainable
   .toString();
 
 console.log("Final result:", result);
+
+/// Observable objects
+
+type ListenerCallback = (newVal: unknown, oldVal: unknown) => void;
+
+const createObservable = <T extends object>(
+  obj: T
+): T & {
+  on: <TProp extends keyof T>(
+    prop: TProp,
+    cb: (newVal: T[TProp], oldValue: T[TProp]) => void
+  ) => void;
+} => {
+  const listeners = new Map<string, ListenerCallback[]>();
+
+  return new Proxy(obj, {
+    set(_, prop, newVal) {
+      const oldVal = obj[prop as keyof typeof obj];
+      obj[prop as keyof typeof obj] = newVal;
+
+      const propListeners = listeners.get(String(prop));
+
+      if (propListeners) {
+        propListeners.forEach((callback) => callback(newVal, oldVal));
+      }
+
+      return true;
+    },
+    get(obj, prop) {
+      if (prop === "on") {
+        return (propName: string, callback: ListenerCallback) => {
+          const currentCallbacks = listeners.get(propName);
+          listeners.set(propName, [...(currentCallbacks || []), callback]);
+        };
+      }
+      return obj[prop as keyof typeof obj];
+    },
+  }) as ReturnType<typeof createObservable<T>>;
+};
+
+const user = createObservable({ name: "Alice", age: 30 });
+
+user.on("age", (curr, prev) => {
+  console.log(curr, prev);
+});
+
+user.on("age", (curr, prev) => {
+  console.log("another age listener");
+});
+
+user.age = 40;
