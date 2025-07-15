@@ -179,16 +179,19 @@ console.log("Final result:", result);
 
 /// Observable objects
 
-type ListenerCallback = (newVal: unknown, oldVal: unknown) => void;
+type ListenerCallback = <T, TProp extends keyof T>(
+  newVal: T[TProp],
+  oldValue: T[TProp]
+) => void;
+
+type OnListener<T> = <TProp extends keyof T>(
+  prop: TProp,
+  cb: ListenerCallback
+) => void;
 
 const createObservable = <T extends object>(
   obj: T
-): T & {
-  on: <TProp extends keyof T>(
-    prop: TProp,
-    cb: (newVal: T[TProp], oldValue: T[TProp]) => void
-  ) => void;
-} => {
+): T & { on: OnListener<T> } => {
   const listeners = new Map<string, ListenerCallback[]>();
 
   return new Proxy(obj, {
