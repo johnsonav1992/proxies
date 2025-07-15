@@ -86,3 +86,33 @@ console.log("proxiedArray[0]:", proxiedArray[0]); // 1 (your version would break
 console.log("proxiedArray.length:", proxiedArray.length); // 5
 console.log("proxiedArray.push(6):", proxiedArray.push(6)); // Still works!
 console.log("proxiedArray[-1]:", proxiedArray[-1]); // Now 6
+
+//// EXERCISE 3 - fn call interceptor
+
+const createLoggedObj = <TObj extends object>(obj: TObj) => {
+  return new Proxy(obj, {
+    get(obj, prop) {
+      const val = obj[prop as keyof typeof obj];
+
+      if (typeof val === "function") {
+        return (...args: unknown[]) => {
+          console.log(`Calling ${String(prop)} with args: [${args}]`);
+          return val.apply(obj, args); // Don't forget to return!
+        };
+      }
+      
+      return val; // Return non-function properties
+    },
+  });
+};
+
+const calculator = {
+  add: (a: number, b: number) => a + b,
+  multiply: (a: number, b: number) => a * b,
+};
+
+const loggedCalculator = createLoggedObj(calculator);
+
+console.log("\n=== Function Call Interceptor Test ===");
+console.log("Result:", loggedCalculator.add(2, 3)); // Should log call and return 5
+console.log("Result:", loggedCalculator.multiply(4, 5)); // Should log call and return 20
