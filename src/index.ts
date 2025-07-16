@@ -184,20 +184,20 @@ type ListenerCallback<T, TProp extends keyof T> = (
   oldValue: T[TProp]
 ) => void;
 
-type OnListener<T> = <TProp extends keyof T>(
+type Listener<T> = <TProp extends keyof T>(
   prop: TProp,
   cb: ListenerCallback<T, TProp>
 ) => void;
 
 const createObservable = <T extends object>(
   obj: T
-): T & { on: OnListener<T> } => {
+): T & { [K in "on" | "off"]: Listener<T> } => {
   const listeners = new Map<string, ListenerCallback<T, keyof T>[]>();
 
   return new Proxy(obj, {
-    set(_, prop, newVal) {
-      const oldVal = obj[prop as keyof typeof obj];
-      obj[prop as keyof typeof obj] = newVal;
+    set(target, prop, newVal) {
+      const oldVal = target[prop as keyof typeof obj];
+      target[prop as keyof typeof target] = newVal;
 
       const propListeners = listeners.get(String(prop));
 
@@ -207,11 +207,21 @@ const createObservable = <T extends object>(
 
       return true;
     },
-    get(obj, prop) {
+    get(_, prop) {
       if (prop === "on") {
         return (propName: string, callback: ListenerCallback<T, keyof T>) => {
           const currentCallbacks = listeners.get(propName);
           listeners.set(propName, [...(currentCallbacks || []), callback]);
+        };
+      }
+
+      if (prop === "off") {
+        return (propName: string, callback: ListenerCallback<T, keyof T>) => {
+          const currentCallbacks = listeners.get(propName);
+          listeners.set(
+            propName,
+            currentCallbacks?.filter((cb) => cb !== callback) || []
+          );
         };
       }
       return obj[prop as keyof typeof obj];
@@ -225,8 +235,14 @@ user.on("age", (curr, prev) => {
   console.log(curr, prev);
 });
 
-user.on("age", (curr, prev) => {
+const listener = (curr: unknown, prev: unknown) => {
   console.log("another age listener");
-});
+};
+
+user.on("age", listener);
 
 user.age = 40;
+
+user.off("age", listener);
+
+user.age = 20;
